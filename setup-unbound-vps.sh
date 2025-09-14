@@ -54,9 +54,16 @@ main() {
   chmod 644 /var/lib/unbound/root.hints
   
   info "Setting up DNSSEC trust anchor..."
-  unbound-anchor -a /var/lib/unbound/root.key || warn "Trust anchor setup had issues"
-  chown unbound:unbound /var/lib/unbound/root.key 2>/dev/null || true
-  chmod 644 /var/lib/unbound/root.key 2>/dev/null || true
+  # Remove any existing trust anchor and system defaults to avoid conflicts
+  rm -f /var/lib/unbound/root.key /usr/share/dns/root.key
+  # Create fresh trust anchor
+  if ! unbound-anchor -a /var/lib/unbound/root.key; then
+    warn "Trust anchor bootstrap failed, using built-in"
+    # Create minimal trust anchor if bootstrap fails
+    echo '. IN DS 20326 8 2 E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D' > /var/lib/unbound/root.key
+  fi
+  chown unbound:unbound /var/lib/unbound/root.key
+  chmod 644 /var/lib/unbound/root.key
   
   info "Writing Unbound configuration..."
   cat > /etc/unbound/unbound.conf.d/local.conf <<'EOF'
