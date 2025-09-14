@@ -105,13 +105,17 @@ EOF
   unbound-checkconf || die "Invalid Unbound configuration"
   
   info "Configuring systemd-resolved..."
-  # Configure systemd-resolved to use Unbound
-  {
-    echo "DNS=127.0.0.1"
-    echo "DNSStubListener=no"
-    echo "Domains=~."
-    echo "FallbackDNS="
-  } > /etc/systemd/resolved.conf
+  # Stop systemd-resolved to free port 53
+  systemctl stop systemd-resolved
+  
+  # Configure systemd-resolved to use Unbound and disable stub listener
+  cat > /etc/systemd/resolved.conf <<'EOF'
+[Resolve]
+DNS=127.0.0.1
+DNSStubListener=no
+Domains=~.
+FallbackDNS=
+EOF
   
   # Fix resolv.conf symlink
   rm -f /etc/resolv.conf
@@ -126,7 +130,8 @@ EOF
     die "Unbound failed to start. Check: journalctl -u unbound"
   fi
   
-  systemctl restart systemd-resolved
+  # Start systemd-resolved after Unbound is running
+  systemctl start systemd-resolved
   
   info "Setting up monthly root hints refresh..."
   cat > /etc/systemd/system/unbound-root-hints.service <<'EOF'
