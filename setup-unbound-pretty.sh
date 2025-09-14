@@ -39,7 +39,15 @@ validate_ip() {
 # Validate CIDR format
 validate_cidr() {
   local cidr="$1"
-  [[ $cidr =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$ ]] || [[ $cidr =~ ^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}/[0-9]{1,3}$ ]]
+  # IPv4 CIDR: x.x.x.x/y where y is 0-32
+  if [[ $cidr =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$ ]]; then
+    return 0
+  fi
+  # IPv6 CIDR: basic validation
+  if [[ $cidr =~ ^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}/([0-9]|[1-9][0-9]|1[01][0-9]|12[0-8])$ ]]; then
+    return 0
+  fi
+  return 1
 }
 
 # Check internet connectivity
